@@ -2,6 +2,8 @@
 ###### DAILY SUDOKU ######
 ##########################
 
+# The only rule is that each row, column, and 3x3 block must have the numbers 1 to 9 once.
+
 import sys, datetime, win32print, win32ui, win32con
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout as grid, QPushButton as button, QHBoxLayout as hlay, QVBoxLayout as vlay, QFrame as line, QLabel as text
 from PyQt5.QtCore import QObject
