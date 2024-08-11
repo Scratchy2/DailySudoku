@@ -2,21 +2,20 @@
 ###### DAILY SUDOKU ######
 ##########################
 
-# Each row, column, and 3x3 block must have the numbers 1 to 9 once.
-
 import sys, datetime, platform
 try:
     import win32print, win32ui, win32con
 except ImportError:
-    print("failed to import win32 libraries")
+    print("failed to import win32 libraries\nyou will not be able to print the Sudoku puzzles")
 except ImportWarning:
-    print("win32 libraries may not work")
+    print("win32 libraries may not work\nyou may encounter some errors printing the Sudoku puzzles")
 except Exception as e:
     print(f"some other error occurred: {e}")
 
 from threading import Thread
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout as grid, QPushButton as button, QHBoxLayout as hlay, QVBoxLayout as vlay, QFrame as line, QLabel as text, QMainWindow as main, QProgressBar as bar, QTextEdit as textarea, QCheckBox as cbox
 from PyQt5.QtCore import QObject, Qt
+from PyQt5.QtGui import QFont
 from PIL import ImageGrab, Image, ImageWin
 from random import shuffle, seed, randint
 from time import sleep, time
@@ -28,8 +27,10 @@ class Buttons(QObject):
         global nums, sudoku
         super().__init__(parent)
         self.buttons = []
+        self.notes = []
         self.text = []
         self.score = 0
+        self.notesEnabled = False
         self.mistakes = 1
         self.totalnums = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
         for i in range(81):
@@ -39,9 +40,18 @@ class Buttons(QObject):
                 self.totalnums[sudoku[row][col]] += 1
         self.nums = nums
         self.isscoreadded = False
+        self.numberFont = QFont()
+        self.numberFont.setPointSize(30)
+        self.numberFont.setWeight(100)
+        self.noteFont = QFont()
+        self.noteFont.setPointSize(1)
+        self.numberFont.setFamily("Courier New, Consolas")
+        self.noteFont.setFamily("8514oem, Courier, Consolas")
     
     def add(self, button: button):
         self.buttons.append(button)
+        self.notes.append([0])
+        button.setFont(self.numberFont)
         button.clicked.connect(self.click)
 
     def click(self):
@@ -56,90 +66,178 @@ class Buttons(QObject):
             row, col, rows, cols = puzzle.getItemPosition(puzzle.indexOf(self.sender()))
             if prefilled[row][col] == "no":
                 if selected == "X":
-                    self.totalnums[int(self.sender().text())] -= 1
+                    try:   
+                        self.totalnums[int(self.sender().text())] -= 1
+                    except:
+                        self.notes[9 * row + col] = [0]
                     self.sender().setText("")
                     if sudoku[row][col] == solutionsudoku[row][col]:
                         self.nums -= 1
                         self.score = floor((((self.nums - nums) * difficulty * 10 + self.nums ** 2) - floor(time() - floor(float(solvetime.text())))) / self.mistakes ** 2)
                         score.setText(f"Score: {self.score}")
                     sudoku[row][col] = 0
-                else:
-                    if sudoku[row][col] != 0:
-                        self.totalnums[int(self.sender().text())] -= 1
-                    self.sender().setText(str(selected))
-                    self.totalnums[int(self.sender().text())] += 1
-                    sudoku[row][col] = int(selected)
-                    if sudoku[row][col] == solutionsudoku[row][col]:
-                        textcolor = " color: #053296;"
-                        if row < 3:
-                            if col < 3:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
-                            elif col < 6:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
+                elif selected != sudoku[row][col]:
+                    if self.notesEnabled:
+                        self.sender().setFont(self.noteFont)
+                        if int(selected) in self.notes[9 * row + col]:
+                            self.notes[9 * row + col].remove(int(selected))
+                            if self.notes[9 * row + col] == [0]:
+                                self.sender().setText("")
                             else:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
-                        elif row < 6:
-                            if col < 3:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
-                            elif col < 6:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
-                            else:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
+                                self.sender().setText(self.notesGenerator(self.notes[9 * row + col]))
                         else:
-                            if col < 3:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
-                            elif col < 6:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
-                            else:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
-                        self.nums += 1
-                        self.score = floor((((self.nums - nums) * difficulty * 10 + self.nums ** 2) - floor(time() - floor(float(solvetime.text())))) / self.mistakes ** 2)
-                        score.setText(f"Score: {self.score}")
+                            if sudoku[row][col] == solutionsudoku[row][col]:
+                                self.nums -= 1
+                                self.score = floor((((self.nums - nums) * difficulty * 10 + self.nums ** 2) - floor(time() - floor(float(solvetime.text())))) / self.mistakes ** 2)
+                                score.setText(f"Score: {self.score}")
+                            self.notes[9 * row + col].append(int(selected))
+                            self.sender().setText(self.notesGenerator(self.notes[9 * row + col]))
+                        textcolor = " color: #555;"
                     else:
-                        textcolor = " color: #F00;"
-                        self.mistakes += 1
-                        if row < 3:
-                            if col < 3:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
-                            elif col < 6:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
-                            else:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
-                        elif row < 6:
-                            if col < 3:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
-                            elif col < 6:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
-                            else:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
+                        self.notes[9 * row + col] = [0]
+                        if sudoku[row][col] != 0:
+                            self.totalnums[int(self.sender().text())] -= 1
+                        self.sender().setText(str(selected))
+                        self.sender().setFont(self.numberFont)
+                        self.totalnums[int(self.sender().text())] += 1
+                        sudoku[row][col] = int(selected)
+                        if sudoku[row][col] == solutionsudoku[row][col]:
+                            textcolor = " color: #053296;"
+                            self.nums += 1
                         else:
-                            if col < 3:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
-                            elif col < 6:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
-                            else:
-                                self.sender().setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
+                            textcolor = " color: #f00;"
+                            self.mistakes += 1
                         self.score = floor((((self.nums - nums) * difficulty * 10 + self.nums ** 2) - floor(time() - floor(float(solvetime.text())))) / self.mistakes ** 2)
                         score.setText(f"Score: {self.score}")
-                    if sudoku == solutionsudoku:
-                        if time() - floor(float(solvetime.text())) >= 3600:
-                            solvetime.setText(f"Time: {int((time() - floor(float(solvetime.text()))) // 3600)}h {int(((time() - floor(float(solvetime.text()))) // 60) % 60)}m {floor((time() - floor(float(solvetime.text()))) % 60)}s")
-                        elif time() - floor(float(solvetime.text())) >= 60:
-                            solvetime.setText(f"Time: {int((time() - floor(float(solvetime.text()))) // 60)}m {floor((time() - floor(float(solvetime.text()))) % 60)}s")
-                        else:
-                            solvetime.setText(f"Time: {floor(time() - floor(float(solvetime.text())))}s")
-                        system2.insertLayout(0, solvedtext)
-                        window2.setWindowTitle("Puzzle solved!")
+                        if sudoku == solutionsudoku:
+                            if time() - floor(float(solvetime.text())) >= 3600:
+                                solvetime.setText(f"Time: {int((time() - floor(float(solvetime.text()))) // 3600)}h {int(((time() - floor(float(solvetime.text()))) // 60) % 60)}m {floor((time() - floor(float(solvetime.text()))) % 60)}s")
+                            elif time() - floor(float(solvetime.text())) >= 60:
+                                solvetime.setText(f"Time: {int((time() - floor(float(solvetime.text()))) // 60)}m {floor((time() - floor(float(solvetime.text()))) % 60)}s")
+                            else:
+                                solvetime.setText(f"Time: {floor(time() - floor(float(solvetime.text())))}s")
+                            system2.insertLayout(0, solvedtext)
+                            window2.setWindowTitle("Puzzle solved!")
                 for i in self.buttons:
-                    if i.geometry().height() == 60 and i.text() != "X":
+                    if i.geometry().height() == 60 and i.text() != "X" and i .text() != "✏️":
                         if self.totalnums[int(i.text())] > 8:
                             i.setEnabled(False)
                         else:
                             i.setEnabled(True)
-
         else:
-            selected = str(self.sender().text())
-            selectedtext.setText(f"Selected: {selected}")
+            if self.sender().text() != "✏️":
+                selected = str(self.sender().text())
+                if self.notesEnabled:
+                    selectedtext.setText(f"Selected: {selected}, notes on")
+                else:
+                    selectedtext.setText(f"Selected: {selected}")
+            else:
+                if self.notesEnabled:
+                    selectedtext.setText(selectedtext.text()[:11])
+                    self.notesEnabled = False
+                else:
+                    selectedtext.setText(selectedtext.text() + ", notes on")
+                    self.notesEnabled = True
+        for i in range(81):
+            row = i // 9
+            col = i % 9
+            if prefilled[row][col] == "yes":
+                textcolor = " color: #000;"
+            elif sudoku[row][col] == solutionsudoku[row][col]:
+                textcolor = " color: #053296;"
+            elif self.notes[i] != [0]:
+                textcolor = " color: #555;"
+            else:
+                textcolor = " color: #F00;"
+            if selected == "X":
+                return
+            if sudoku[row][col] == int(selected):
+                if row < 3:
+                    if col < 3:
+                        self.buttons[i].setStyleSheet(f"background-color: #aaa;{textcolor}")
+                    elif col < 6:
+                        self.buttons[i].setStyleSheet(f"background-color: #bbb;{textcolor}")
+                    else:
+                        self.buttons[i].setStyleSheet(f"background-color: #aaa;{textcolor}")
+                elif row < 6:
+                    if col < 3:
+                        self.buttons[i].setStyleSheet(f"background-color: #bbb;{textcolor}")
+                    elif col < 6:
+                        self.buttons[i].setStyleSheet(f"background-color: #aaa;{textcolor}")
+                    else:
+                        self.buttons[i].setStyleSheet(f"background-color: #bbb;{textcolor}")
+                else:
+                    if col < 3:
+                        self.buttons[i].setStyleSheet(f"background-color: #aaa;{textcolor}")
+                    elif col < 6:
+                        self.buttons[i].setStyleSheet(f"background-color: #bbb;{textcolor}")
+                    else:
+                        self.buttons[i].setStyleSheet(f"background-color: #aaa;{textcolor}")
+            else:
+                if row < 3:
+                    if col < 3:
+                        self.buttons[i].setStyleSheet(f"background-color: #ddd;{textcolor}")
+                    elif col < 6:
+                        self.buttons[i].setStyleSheet(f"background-color: #fff;{textcolor}")
+                    else:
+                        self.buttons[i].setStyleSheet(f"background-color: #ddd;{textcolor}")
+                elif row < 6:
+                    if col < 3:
+                        self.buttons[i].setStyleSheet(f"background-color: #fff;{textcolor}")
+                    elif col < 6:
+                        self.buttons[i].setStyleSheet(f"background-color: #ddd;{textcolor}")
+                    else:
+                        self.buttons[i].setStyleSheet(f"background-color: #fff;{textcolor}")
+                else:
+                    if col < 3:
+                        self.buttons[i].setStyleSheet(f"background-color: #ddd;{textcolor}")
+                    elif col < 6:
+                        self.buttons[i].setStyleSheet(f"background-color: #fff;{textcolor}")
+                    else:
+                        self.buttons[i].setStyleSheet(f"background-color: #ddd;{textcolor}")
+    
+    def notesGenerator(self, notes: list):
+        first, second, third = "|", "|", "|"
+        if 1 in notes:
+            first += "1"
+        else:
+            first += " "
+        if 2 in notes:
+            first += "2"
+        else:
+            first += " "
+        if 3 in notes:
+            first += "3"
+        else:
+            first += " "
+        first += "|"
+        if 4 in notes:
+            second += "4"
+        else:
+            second += " "
+        if 5 in notes:
+            second += "5"
+        else:
+            second += " "
+        if 6 in notes:
+            second += "6"
+        else:
+            second += " "
+        second += "|"
+        if 7 in notes:
+            third += "7"
+        else:
+            third += " "
+        if 8 in notes:
+            third += "8"
+        else:
+            third += " "
+        if 9 in notes:
+            third += "9"
+        else:
+            third += " "
+        third += "|"
+        return "\n".join([first, second, third])
 
 class Music:
     def __init__(self):
@@ -156,10 +254,10 @@ class Music:
                             channels = self.wf.getnchannels(),
                             rate = self.wf.getframerate(),
                             output = True)
-                data = self.wf.readframes(1024)
+                data = self.wf.readframes(48000)
                 while data:
                     self.stream.write(data)
-                    data = self.wf.readframes(1024)
+                    data = self.wf.readframes(48000)
                 self.wf.close()
                 self.stream.close()
                 self.p.terminate()
@@ -300,7 +398,7 @@ def makeGrid(sudoku: list):
     sudoku[row][column] = 0
 
 def Sudoku(diff: str | None = None):
-    global solutions, sudoku, difficulty, solutionsudoku, nums, attempts, stars, row, column, value, copy, prefilled, score, picker, selected, puzzle, buttons, square, textcolor, system2, selectedtext, printbutton, solvedtext, solvetime, window2, system3, mainwindow, progress, music
+    global solutions, sudoku, difficulty, solutionsudoku, nums, attempts, stars, row, column, value, copy, prefilled, score, picker, selected, puzzle, buttons, square, textcolor, system2, selectedtext, printbutton, solvedtext, solvetime, window2, system3, mainwindow, progress, music, dailyprogress
     solutions = 0
     sudoku = []
     for _ in range(9):
@@ -308,11 +406,10 @@ def Sudoku(diff: str | None = None):
     sudoku = makeGrid(sudoku)
     solutionsudoku = [[], [], [], [], [], [], [], [], []]
     nums = 81
-    # this tells you the solution
-    # for r in range(9):
-    #     for c in range(9):
-    #         solutionsudoku[r].append(sudoku[r][c])
-    #     print(solutionsudoku[r])
+    for r in range(9):
+        for c in range(9):
+            solutionsudoku[r].append(sudoku[r][c])
+        print(solutionsudoku[r]) # this is the line to comment if you don't want the solution
     attempts = difficulty
     total = attempts
     stars = round((round(attempts) - 38) / 43 * 5, 1)
@@ -337,6 +434,10 @@ def Sudoku(diff: str | None = None):
             progress.setValue(floor((1 - attempts / total) * 100))
         except:
             pass
+        try:
+            dailyprogress.setValue(floor((1 - attempts / total) * 100))
+        except:
+            pass
     prefilled = [[], [], [], [], [], [], [], [], []]
     for r in range(9):
         for c in range(9):
@@ -349,55 +450,57 @@ def Sudoku(diff: str | None = None):
     picker = hlay()
     selected = 1
     puzzle = grid()
+    puzzle.setColumnStretch(0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8, 1)
     puzzle.setContentsMargins(0, 0, 0, 100)
     buttons = Buttons()
     for i in range(9):
         for j in range(9):
             square = button(None)
             square.setFixedSize(70, 70)
+            numberFont = QFont()
+            numberFont.setPointSize(30)
+            numberFont.setWeight(100)
+            square.setFont(numberFont)
             textcolor = " color: #053296;" if prefilled[i][j] == "no" else ""
             if i < 3:
                 if j < 3:
-                    square.setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
+                    square.setStyleSheet(f"background-color: #ddd;{textcolor}")
                 elif j < 6:
-                    square.setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
+                    square.setStyleSheet(f"background-color: #fff;{textcolor}")
                 else:
-                    square.setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
+                    square.setStyleSheet(f"background-color: #ddd;{textcolor}")
             elif i < 6:
                 if j < 3:
-                    square.setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
+                    square.setStyleSheet(f"background-color: #fff;{textcolor}")
                 elif j < 6:
-                    square.setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
+                    square.setStyleSheet(f"background-color: #ddd;{textcolor}")
                 else:
-                    square.setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
+                    square.setStyleSheet(f"background-color: #fff;{textcolor}")
             else:
                 if j < 3:
-                    square.setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
+                    square.setStyleSheet(f"background-color: #ddd;{textcolor}")
                 elif j < 6:
-                    square.setStyleSheet(f"font-size: 20pt; background-color: #fff;{textcolor}")
+                    square.setStyleSheet(f"background-color: #fff;{textcolor}")
                 else:
-                    square.setStyleSheet(f"font-size: 20pt; background-color: #ddd;{textcolor}")
+                    square.setStyleSheet(f"background-color: #ddd;{textcolor}")
             buttons.add(square)
             if sudoku[i][j] != 0:
                 square.setText(str(sudoku[i][j]))
             puzzle.addWidget(square, i, j)
-    layout = hlay()
-    for i in range(9):
-        frame = line()
-        frame.resize(10, 630)
-        layout.addWidget(frame)
-    for i in range(10):
+    for i in range(11):
         if i < 9:
             square = button(str(i + 1))
-        else:
+        elif i == 9:
             square = button("X")
+        else:
+            square = button("✏️")
         square.setFixedSize(60, 60)
         square.setStyleSheet("font-size: 17pt;")
         buttons.add(square)
         picker.addWidget(square)
+    picker.addStretch(1)
     system2 = vlay()
     system2.addLayout(puzzle)
-    system2.addLayout(layout)
     selectedtext = text("Selected: 1")
     selectedtext.setStyleSheet("font-size: 42px;")
     printbutton = button("Print Puzzle")
@@ -508,15 +611,15 @@ def CustomDifficulty():
 def calculateChange():
     try:
         global freeplay, dailychallenge, skillpoints, stars
-        minchange = round(((stars * 5) / (int(skillpoints.toPlainText()) / 1000 + 0.03)) - (int(skillpoints.toPlainText()) / 70))
-        maxchange = round(((stars * 10) / (int(skillpoints.toPlainText()) / 1000 + 0.03)) - (int(skillpoints.toPlainText()) / 70))
+        freeplay.setEnabled(True)
+        dailychallenge.setEnabled(True)
+        minchange = round((((stars + 1) * 5) / (int(skillpoints.toPlainText()) / 1000 + 0.03)) - (int(skillpoints.toPlainText()) / 70))
+        maxchange = round((((stars + 1) * 10) / (int(skillpoints.toPlainText()) / 1000 + 0.03)) - (int(skillpoints.toPlainText()) / 70))
         if minchange >= 0:
             minchange = f"+{minchange}"
         if maxchange >= 0:
             maxchange = f"+{maxchange}"
         dailychallenge.setText(f"Daily Challenge ({stars + 1}★) ({minchange} with hints — {maxchange} without hints)")
-        freeplay.setEnabled(True)
-        dailychallenge.setEnabled(True)
     except:
         pass
 
@@ -541,11 +644,13 @@ if __name__ == "__main__":
     skillpoints.textChanged.connect(calculateChange)
     canplaymusic = cbox("Music")
     canplaymusic.setChecked(True)
+    dailyprogress = bar()
     system.addWidget(title)
     system.addWidget(freeplay)
     system.addWidget(dailychallenge)
     system.addWidget(skillpoints)
     system.addWidget(canplaymusic)
+    system.addWidget(dailyprogress)
     freeplay.clicked.connect(CustomDifficulty)
     dailychallenge.clicked.connect(SudokuInit)
     mainwindow.setWindowTitle("Daily Sudoku")
