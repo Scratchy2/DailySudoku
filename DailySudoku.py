@@ -12,15 +12,16 @@ except ImportWarning:
 except Exception as e:
     print(f"some other error occurred: {e}")
 
-from threading import Thread
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout as grid, QPushButton as button, QHBoxLayout as hlay, QVBoxLayout as vlay, QFrame as line, QLabel as text, QMainWindow as main, QProgressBar as bar, QTextEdit as textarea, QCheckBox as cbox
-from PyQt5.QtCore import QObject, Qt
+from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout as grid, QPushButton as button, QHBoxLayout as hlay, QVBoxLayout as vlay, QLabel as text, QMainWindow as main, QProgressBar as bar, QTextEdit as textarea, QCheckBox as cbox
+from PyQt5.QtCore import QObject, Qt, QUrl
 from PyQt5.QtGui import QFont
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PIL import ImageGrab, Image, ImageWin
 from random import shuffle, seed, randint
 from time import sleep, time
 from math import floor
 from pyautogui import alert
+from io import BytesIO
 
 class Buttons(QObject):
     def __init__(self, parent=None):
@@ -241,35 +242,33 @@ class Buttons(QObject):
 
 class Music:
     def __init__(self):
-        self.isrunning = False
+        self.isrunning = None
+        self.player = QMediaPlayer()
+        self.player.stateChanged.connect(self.stateChanged)
+        self.player.error.connect(self.error)
+        self.player.mediaStatusChanged.connect(self.isAudioLoaded)
     
     def start(self):
-        try:
-            self.isrunning = True
-            while self.isrunning:
-                import wave, pyaudio
-                self.wf = wave.open("SudokuMusic.wav", "rb")
-                self.p = pyaudio.PyAudio()
-                self.stream = self.p.open(format=self.p.get_format_from_width(self.wf.getsampwidth()),
-                            channels = self.wf.getnchannels(),
-                            rate = self.wf.getframerate(),
-                            output = True)
-                data = self.wf.readframes(48000)
-                while data:
-                    self.stream.write(data)
-                    data = self.wf.readframes(48000)
-                self.wf.close()
-                self.stream.close()
-                self.p.terminate()
-        except:
-            pass
+        self.isrunning = True
+        self.player.setMedia(QMediaContent(QUrl("https://github.com/Scratchy2/DailySudoku/raw/main/SudokuMusic.wav")))
     
     def stop(self):
+        self.isrunning = False
+        self.player.stop()
+    
+    def stateChanged(self, state):
+        if state == QMediaPlayer.StoppedState and self.isrunning:
+            self.player.play()
+    
+    def error(self):
+        print(f"Failed to play audio: {self.player.errorString()}")
         if self.isrunning:
-            self.isrunning = False
-            self.wf.close()
-            self.stream.close()
-            self.p.terminate()
+            sleep(0.1)
+            self.start()
+
+    def isAudioLoaded(self, status):
+        if status == QMediaPlayer.LoadedMedia and self.isrunning:
+            self.player.play()
 
 def printPuzzle():
     global window2
@@ -398,7 +397,7 @@ def makeGrid(sudoku: list):
     sudoku[row][column] = 0
 
 def Sudoku(diff: str | None = None):
-    global solutions, sudoku, difficulty, solutionsudoku, nums, attempts, stars, row, column, value, copy, prefilled, score, picker, selected, puzzle, buttons, square, textcolor, system2, selectedtext, printbutton, solvedtext, solvetime, window2, system3, mainwindow, progress, music, dailyprogress
+    global solutions, sudoku, difficulty, solutionsudoku, nums, attempts, stars, row, column, value, copy, prefilled, score, picker, selected, puzzle, buttons, square, textcolor, system2, selectedtext, printbutton, solvedtext, solvetime, window2, system3, mainwindow, progress, music, dailyprogress, app
     solutions = 0
     sudoku = []
     for _ in range(9):
@@ -521,7 +520,9 @@ def Sudoku(diff: str | None = None):
     else:
         window2.setWindowTitle(f"{diff} ({stars + 1}★)")
     window2.windowTitleChanged.connect(music.stop)
+    app.aboutToQuit.connect(music.stop)
     window2.setGeometry(0, 0, 0, 0)
+    window2.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint)
     mainwindow.destroy()
     window2.show()
 
@@ -532,10 +533,10 @@ def SudokuInit(diff: str | None = None):
     music = Music()
     try:
         if canplaymusic.isChecked():
-            Thread(target=music.start).start()
+            music.start()
     except:
         if canplaymusic2.isChecked():
-            Thread(target=music.start).start()
+            music.start()
     Sudoku(diff)
 
 def VeryEasy():
