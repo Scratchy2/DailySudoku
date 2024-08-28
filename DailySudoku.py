@@ -274,15 +274,15 @@ def printPuzzle():
     global window2
     if platform.system() == "Windows":
         screenshot = ImageGrab.grab(bbox=(window2.x(), window2.y(), window2.width(), window2.height()))
-        screenshot.save("C:/Users/Bentley School/OneDrive - Liberty University/Documents/vscode/DailySudoku.png")
-        image = Image.open("C:/Users/Bentley School/OneDrive - Liberty University/Documents/vscode/DailySudoku.png")
+        screenshot.save("DailySudoku.png")
+        image = Image.open("DailySudoku.png")
         printer = win32print.GetDefaultPrinter()
         hdc = win32ui.CreateDC()
         hdc.CreatePrinterDC(printer)
         area = hdc.GetDeviceCaps(win32con.PHYSICALWIDTH), hdc.GetDeviceCaps(win32con.PHYSICALHEIGHT)
         size = hdc.GetDeviceCaps(win32con.HORZRES), hdc.GetDeviceCaps(win32con.VERTRES)
         image.thumbnail(area, Image.LANCZOS)
-        hdc.StartDoc("C:/Users/Bentley School/OneDrive - Liberty University/Documents/vscode/DailySudoku.png")
+        hdc.StartDoc("DailySudoku.png")
         hdc.StartPage()
         dib = ImageWin.Dib(image)
         x1 = int((size[0] - area[0]) / 2)
@@ -408,7 +408,7 @@ def Sudoku(diff: str | None = None):
     for r in range(9):
         for c in range(9):
             solutionsudoku[r].append(sudoku[r][c])
-        print(solutionsudoku[r]) # this is the line to comment if you don't want the solution
+        # print(solutionsudoku[r]) # this is the line to comment if you don't want the solution
     attempts = difficulty
     total = attempts
     stars = round((round(attempts) - 38) / 43 * 5, 1)
