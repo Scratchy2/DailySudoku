@@ -21,7 +21,6 @@ from random import shuffle, seed, randint
 from time import sleep, time
 from math import floor
 from pyautogui import alert
-from io import BytesIO
 
 class Buttons(QObject):
     def __init__(self, parent=None):
@@ -49,6 +48,11 @@ class Buttons(QObject):
         self.numberFont.setFamily("Courier New, Consolas")
         self.noteFont.setFamily("8514oem, Courier, Consolas")
     
+    def quit(self):
+        global window2, music
+        window2.destroy()
+        music.stop()
+
     def add(self, button: button):
         self.buttons.append(button)
         self.notes.append([0])
@@ -58,8 +62,11 @@ class Buttons(QObject):
     def click(self):
         global selected, selectedtext, puzzle, prefilled, solutionsudoku, solvetime, solvedtext, system, score, nums, printbutton, difficulty
         if not self.isscoreadded:
+            close = button("Quit Puzzle")
+            close.clicked.connect(self.quit)
             system2.insertWidget(0, score)
             system2.insertWidget(2, selectedtext)
+            system2.addWidget(close)
             puzzle.setContentsMargins(0, 0, 0, 0)
             printbutton.deleteLater()
             self.isscoreadded = True
@@ -78,7 +85,7 @@ class Buttons(QObject):
                         score.setText(f"Score: {self.score}")
                     sudoku[row][col] = 0
                 elif selected != sudoku[row][col]:
-                    if self.notesEnabled:
+                    if (self.notesEnabled) and (sudoku[row][col] == 0):
                         self.sender().setFont(self.noteFont)
                         if int(selected) in self.notes[9 * row + col]:
                             self.notes[9 * row + col].remove(int(selected))
@@ -94,7 +101,7 @@ class Buttons(QObject):
                             self.notes[9 * row + col].append(int(selected))
                             self.sender().setText(self.notesGenerator(self.notes[9 * row + col]))
                         textcolor = " color: #555;"
-                    else:
+                    elif not self.notesEnabled:
                         self.notes[9 * row + col] = [0]
                         if sudoku[row][col] != 0:
                             self.totalnums[int(self.sender().text())] -= 1
@@ -247,10 +254,11 @@ class Music:
         self.player.stateChanged.connect(self.stateChanged)
         self.player.error.connect(self.error)
         self.player.mediaStatusChanged.connect(self.isAudioLoaded)
-    
+
     def start(self):
         self.isrunning = True
-        self.player.setMedia(QMediaContent(QUrl("https://github.com/Scratchy2/DailySudoku/raw/main/SudokuMusic.wav")))
+        self.player.setMedia(QMediaContent(QUrl("https://github.com/Scratchy2/DailySudoku/raw/main/SudokuMusic2.wav")))
+        self.player.play()
     
     def stop(self):
         self.isrunning = False
@@ -294,7 +302,7 @@ def printPuzzle():
         hdc.EndDoc()
         hdc.DeleteDC()
     else:
-        alert(f"This feature will only work on Windows, not {platform.system()}!")
+        alert(f"This feature will only work on Windows, not {platform.system()}! It's because of win32 libraries.")
 
 def isGridFull(sudoku: list):
     for i in range(81):
@@ -616,11 +624,12 @@ def calculateChange():
         dailychallenge.setEnabled(True)
         minchange = round((((stars + 1) * 5) / (int(skillpoints.toPlainText()) / 1000 + 0.03)) - (int(skillpoints.toPlainText()) / 70))
         maxchange = round((((stars + 1) * 10) / (int(skillpoints.toPlainText()) / 1000 + 0.03)) - (int(skillpoints.toPlainText()) / 70))
+        failchange = round((0 / (int(skillpoints.toPlainText()) / 1000 + 0.03)) - (int(skillpoints.toPlainText()) / 70))
         if minchange >= 0:
             minchange = f"+{minchange}"
         if maxchange >= 0:
             maxchange = f"+{maxchange}"
-        dailychallenge.setText(f"Daily Challenge ({stars + 1}★) ({minchange} with hints — {maxchange} without hints)")
+        dailychallenge.setText(f"Daily Challenge ({stars + 1}★) ({minchange} with hints — {maxchange} without hints — {failchange} if failed)")
     except:
         pass
 
