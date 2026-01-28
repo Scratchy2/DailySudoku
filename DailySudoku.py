@@ -12,7 +12,7 @@ except ImportWarning:
 except Exception as e:
     print(f"some other error occurred: {e}")
 
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout as grid, QPushButton as button, QHBoxLayout as hlay, QVBoxLayout as vlay, QLabel as text, QMainWindow as main, QProgressBar as bar, QTextEdit as textarea, QCheckBox as cbox
+from PyQt5.QtWidgets import QApplication, QWidget as win, QGridLayout as grid, QPushButton as button, QHBoxLayout as hlay, QVBoxLayout as vlay, QLabel as text, QMainWindow as main, QProgressBar as bar, QTextEdit as textarea, QCheckBox as cbox
 from PyQt5.QtCore import QObject, Qt, QUrl
 from PyQt5.QtGui import QFont
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
@@ -42,7 +42,7 @@ class Buttons(QObject):
         self.isscoreadded = False
         self.numberFont = QFont()
         self.numberFont.setPointSize(30)
-        self.numberFont.setWeight(100)
+        self.numberFont.setWeight(1000)
         self.noteFont = QFont()
         self.noteFont.setPointSize(1)
         self.numberFont.setFamily("Courier New, Consolas")
@@ -50,7 +50,7 @@ class Buttons(QObject):
     
     def quit(self):
         global window2, music
-        window2.destroy()
+        window2.close()
         music.stop()
 
     def add(self, button: button):
@@ -63,6 +63,8 @@ class Buttons(QObject):
         global selected, selectedtext, puzzle, prefilled, solutionsudoku, solvetime, solvedtext, system, score, nums, printbutton, difficulty
         if not self.isscoreadded:
             close = button("Quit Puzzle")
+            close.setFixedHeight(35)
+            close.setStyleSheet("background-color: #333; border-radius: 5px;")
             close.clicked.connect(self.quit)
             system2.insertWidget(0, score)
             system2.insertWidget(2, selectedtext)
@@ -81,7 +83,7 @@ class Buttons(QObject):
                     self.sender().setText("")
                     if sudoku[row][col] == solutionsudoku[row][col]:
                         self.nums -= 1
-                        self.score = floor((((self.nums - nums) * difficulty * 10 + self.nums ** 2) - floor(time() - floor(float(solvetime.text())))) / self.mistakes ** 2)
+                        self.mistakes += 1
                         score.setText(f"Score: {self.score}")
                     sudoku[row][col] = 0
                 elif selected != sudoku[row][col]:
@@ -96,7 +98,7 @@ class Buttons(QObject):
                         else:
                             if sudoku[row][col] == solutionsudoku[row][col]:
                                 self.nums -= 1
-                                self.score = floor((((self.nums - nums) * difficulty * 10 + self.nums ** 2) - floor(time() - floor(float(solvetime.text())))) / self.mistakes ** 2)
+                                self.mistakes += 1
                                 score.setText(f"Score: {self.score}")
                             self.notes[9 * row + col].append(int(selected))
                             self.sender().setText(self.notesGenerator(self.notes[9 * row + col]))
@@ -115,23 +117,34 @@ class Buttons(QObject):
                         else:
                             textcolor = " color: #f00;"
                             self.mistakes += 1
-                        self.score = floor((((self.nums - nums) * difficulty * 10 + self.nums ** 2) - floor(time() - floor(float(solvetime.text())))) / self.mistakes ** 2)
                         score.setText(f"Score: {self.score}")
                         if sudoku == solutionsudoku:
                             if time() - floor(float(solvetime.text())) >= 3600:
-                                solvetime.setText(f"Time: {int((time() - floor(float(solvetime.text()))) // 3600)}h {int(((time() - floor(float(solvetime.text()))) // 60) % 60)}m {floor((time() - floor(float(solvetime.text()))) % 60)}s")
+                                minutes, seconds = divmod(time() - float(solvetime.text()), 60)
+                                hours = minutes // 60
+                                minutes %= 60
+                                solvetime.setText(f"Time: {floor(hours)}h {floor(minutes)}m {floor(seconds)}s")
                             elif time() - floor(float(solvetime.text())) >= 60:
-                                solvetime.setText(f"Time: {int((time() - floor(float(solvetime.text()))) // 60)}m {floor((time() - floor(float(solvetime.text()))) % 60)}s")
+                                minutes, seconds = divmod(time() - floor(float(solvetime.text())), 60)
+                                solvetime.setText(f"Time: {floor(minutes)}m {floor(seconds)}s")
                             else:
-                                solvetime.setText(f"Time: {floor(time() - floor(float(solvetime.text())))}s")
+                                solvetime.setText(f"Time: {floor(time() - float(solvetime.text()))}s")
                             system2.insertLayout(0, solvedtext)
                             window2.setWindowTitle("Puzzle solved!")
+                try:
+                    self.score = floor((((self.nums - nums) * difficulty * 10 + self.nums ** 2) - floor(time() - floor(float(solvetime.text())))) / self.mistakes ** 2)
+                except ValueError:
+                    pass
+                idx = 1
                 for i in self.buttons:
                     if i.geometry().height() == 60 and i.text() != "X" and i .text() != "✏️":
-                        if self.totalnums[int(i.text())] > 8:
+                        if self.totalnums[idx] > 8:
                             i.setEnabled(False)
+                            i.setText("▯")
                         else:
                             i.setEnabled(True)
+                            i.setText(str(idx))
+                        idx += 1
         else:
             if self.sender().text() != "✏️":
                 selected = str(self.sender().text())
@@ -162,47 +175,47 @@ class Buttons(QObject):
             if sudoku[row][col] == int(selected):
                 if row < 3:
                     if col < 3:
-                        self.buttons[i].setStyleSheet(f"background-color: #aaa;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #888; border-radius: 3px;{textcolor}")
                     elif col < 6:
-                        self.buttons[i].setStyleSheet(f"background-color: #bbb;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #999; border-radius: 3px;{textcolor}")
                     else:
-                        self.buttons[i].setStyleSheet(f"background-color: #aaa;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #888; border-radius: 3px;{textcolor}")
                 elif row < 6:
                     if col < 3:
-                        self.buttons[i].setStyleSheet(f"background-color: #bbb;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #999; border-radius: 3px;{textcolor}")
                     elif col < 6:
-                        self.buttons[i].setStyleSheet(f"background-color: #aaa;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #888; border-radius: 3px;{textcolor}")
                     else:
-                        self.buttons[i].setStyleSheet(f"background-color: #bbb;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #999; border-radius: 3px;{textcolor}")
                 else:
                     if col < 3:
-                        self.buttons[i].setStyleSheet(f"background-color: #aaa;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #888; border-radius: 3px;{textcolor}")
                     elif col < 6:
-                        self.buttons[i].setStyleSheet(f"background-color: #bbb;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #999; border-radius: 3px;{textcolor}")
                     else:
-                        self.buttons[i].setStyleSheet(f"background-color: #aaa;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #888; border-radius: 3px;{textcolor}")
             else:
                 if row < 3:
                     if col < 3:
-                        self.buttons[i].setStyleSheet(f"background-color: #ddd;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #ddd; border-radius: 3px;{textcolor}")
                     elif col < 6:
-                        self.buttons[i].setStyleSheet(f"background-color: #fff;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #fff; border-radius: 3px;{textcolor}")
                     else:
-                        self.buttons[i].setStyleSheet(f"background-color: #ddd;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #ddd; border-radius: 3px;{textcolor}")
                 elif row < 6:
                     if col < 3:
-                        self.buttons[i].setStyleSheet(f"background-color: #fff;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #fff; border-radius: 3px;{textcolor}")
                     elif col < 6:
-                        self.buttons[i].setStyleSheet(f"background-color: #ddd;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #ddd; border-radius: 3px;{textcolor}")
                     else:
-                        self.buttons[i].setStyleSheet(f"background-color: #fff;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #fff; border-radius: 3px;{textcolor}")
                 else:
                     if col < 3:
-                        self.buttons[i].setStyleSheet(f"background-color: #ddd;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #ddd; border-radius: 3px;{textcolor}")
                     elif col < 6:
-                        self.buttons[i].setStyleSheet(f"background-color: #fff;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #fff; border-radius: 3px;{textcolor}")
                     else:
-                        self.buttons[i].setStyleSheet(f"background-color: #ddd;{textcolor}")
+                        self.buttons[i].setStyleSheet(f"background-color: #ddd; border-radius: 3px;{textcolor}")
     
     def notesGenerator(self, notes: list):
         first, second, third = "|", "|", "|"
@@ -257,7 +270,7 @@ class Music:
 
     def start(self):
         self.isrunning = True
-        self.player.setMedia(QMediaContent(QUrl("https://github.com/Scratchy2/DailySudoku/raw/main/SudokuMusic2.wav")))
+        self.player.setMedia(QMediaContent(QUrl("https://github.com/Scratchy2/DailySudoku/raw/main/SudokuMusic.wav")))
         self.player.play()
     
     def stop(self):
@@ -278,29 +291,68 @@ class Music:
         if status == QMediaPlayer.LoadedMedia and self.isrunning:
             self.player.play()
 
-def printPuzzle():
-    global window2
+def printPuzzle(pr: str):
+    if platform.system() == "Windows":
+        try:
+            image = Image.open("DailySudoku.png")
+            hdc = win32ui.CreateDC()
+            hdc.CreatePrinterDC(pr)
+            area = hdc.GetDeviceCaps(win32con.PHYSICALWIDTH), hdc.GetDeviceCaps(win32con.PHYSICALHEIGHT)
+            size = hdc.GetDeviceCaps(win32con.HORZRES), hdc.GetDeviceCaps(win32con.VERTRES)
+            image.thumbnail(area, Image.LANCZOS)
+            hdc.StartDoc("DailySudoku.png")
+            hdc.StartPage()
+            dib = ImageWin.Dib(image)
+            x1 = int((size[0] - area[0]) / 2)
+            y1 = int((size[1] - area[1]) / 2)
+            x2 = x1 + area[0]
+            y2 = y1 + area[1]
+            dib.draw(hdc.GetHandleOutput(), (x1, y1, x2, y2))
+            hdc.EndPage()
+            hdc.EndDoc()
+            hdc.DeleteDC()
+        except Exception as e:
+            print("Error printing:", e)
+            return "error printing"
+    else:
+        alert(f"This feature will only work on Windows, not {platform.system()}! It's because of win32 libraries.")
+
+def choosePrinter():
+    global window2, choose
     if platform.system() == "Windows":
         screenshot = ImageGrab.grab(bbox=(window2.x(), window2.y(), window2.width(), window2.height()))
         screenshot.save("DailySudoku.png")
-        image = Image.open("DailySudoku.png")
-        printer = win32print.GetDefaultPrinter()
-        hdc = win32ui.CreateDC()
-        hdc.CreatePrinterDC(printer)
-        area = hdc.GetDeviceCaps(win32con.PHYSICALWIDTH), hdc.GetDeviceCaps(win32con.PHYSICALHEIGHT)
-        size = hdc.GetDeviceCaps(win32con.HORZRES), hdc.GetDeviceCaps(win32con.VERTRES)
-        image.thumbnail(area, Image.LANCZOS)
-        hdc.StartDoc("DailySudoku.png")
-        hdc.StartPage()
-        dib = ImageWin.Dib(image)
-        x1 = int((size[0] - area[0]) / 2)
-        y1 = int((size[1] - area[1]) / 2)
-        x2 = x1 + area[0]
-        y2 = y1 + area[1]
-        dib.draw(hdc.GetHandleOutput(), (x1, y1, x2, y2))
-        hdc.EndPage()
-        hdc.EndDoc()
-        hdc.DeleteDC()
+        printers = []
+        for printer in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL):
+            printers.append(printer[2])
+        choose = win()
+        chooselayout = vlay()
+        titlec = text("Choose Printer")
+        titlec.setAlignment(Qt.AlignCenter)
+        titlec.setStyleSheet("font-size: 42px;")
+        chooselayout.addWidget(titlec)
+        titled = text("Clicking a button will print the puzzle on that printer once.")
+        titled.setStyleSheet("font-size: 15px;")
+        chooselayout.addWidget(titled)
+        idx = 0
+        for p in printers:
+            exec(f'printer{idx} = button("{p}")')
+            exec(f'printer{idx}.setStyleSheet("border-radius: 5px; background-color: #333;")')
+            exec(f'printer{idx}.setFixedHeight(35)')
+            exec(f'printer{idx}.clicked.connect(lambda: printPuzzle("{p}"))')
+            exec(f"chooselayout.addWidget(printer{idx})")
+            idx += 1
+        cancel = button("Close Printing")
+        cancel.setStyleSheet("border-radius: 5px; background-color: #333;")
+        cancel.setFixedHeight(35)
+        cancel.clicked.connect(choose.close)
+        chooselayout.addWidget(cancel)
+        choose.setLayout(chooselayout)
+        choose.setWindowTitle("Printing Puzzle")
+        choose.setStyleSheet("background-color: black; color: white;")
+        choose.setGeometry(0, 0, 500, 500)
+        choose.show()
+        window2.setStyleSheet("background-color: black; color: white;")
     else:
         alert(f"This feature will only work on Windows, not {platform.system()}! It's because of win32 libraries.")
 
@@ -359,7 +411,7 @@ def solutionCountOfGrid(sudoku):
                                 if solutionCountOfGrid(sudoku):
                                     return True
             break
-    sudoku[row][column] = 0 
+    sudoku[row][column] = 0
 
 def makeGrid(sudoku: list):
     og = sudoku
@@ -419,7 +471,7 @@ def Sudoku(diff: str | None = None):
         # print(solutionsudoku[r]) # this is the line to comment if you don't want the solution
     attempts = difficulty
     total = attempts
-    stars = round((round(attempts) - 38) / 43 * 5, 1)
+    stars = round((round(difficulty) - 38) / 43 * 5, 1)
     sleep(1)
     while attempts > 0:
         row = randint(0, 8)
@@ -468,28 +520,28 @@ def Sudoku(diff: str | None = None):
             numberFont.setPointSize(30)
             numberFont.setWeight(100)
             square.setFont(numberFont)
-            textcolor = " color: #053296;" if prefilled[i][j] == "no" else ""
+            textcolor = " color: #053296;" if prefilled[i][j] == "no" else " color: #000000;"
             if i < 3:
                 if j < 3:
-                    square.setStyleSheet(f"background-color: #ddd;{textcolor}")
+                    square.setStyleSheet(f"background-color: #ddd; border-radius: 3px;{textcolor}")
                 elif j < 6:
-                    square.setStyleSheet(f"background-color: #fff;{textcolor}")
+                    square.setStyleSheet(f"background-color: #fff; border-radius: 3px;{textcolor}")
                 else:
-                    square.setStyleSheet(f"background-color: #ddd;{textcolor}")
+                    square.setStyleSheet(f"background-color: #ddd; border-radius: 3px;{textcolor}")
             elif i < 6:
                 if j < 3:
-                    square.setStyleSheet(f"background-color: #fff;{textcolor}")
+                    square.setStyleSheet(f"background-color: #fff; border-radius: 3px;{textcolor}")
                 elif j < 6:
-                    square.setStyleSheet(f"background-color: #ddd;{textcolor}")
+                    square.setStyleSheet(f"background-color: #ddd; border-radius: 3px;{textcolor}")
                 else:
-                    square.setStyleSheet(f"background-color: #fff;{textcolor}")
+                    square.setStyleSheet(f"background-color: #fff; border-radius: 3px;{textcolor}")
             else:
                 if j < 3:
-                    square.setStyleSheet(f"background-color: #ddd;{textcolor}")
+                    square.setStyleSheet(f"background-color: #ddd; border-radius: 3px;{textcolor}")
                 elif j < 6:
-                    square.setStyleSheet(f"background-color: #fff;{textcolor}")
+                    square.setStyleSheet(f"background-color: #fff; border-radius: 3px;{textcolor}")
                 else:
-                    square.setStyleSheet(f"background-color: #ddd;{textcolor}")
+                    square.setStyleSheet(f"background-color: #ddd; border-radius: 3px;{textcolor}")
             buttons.add(square)
             if sudoku[i][j] != 0:
                 square.setText(str(sudoku[i][j]))
@@ -502,42 +554,43 @@ def Sudoku(diff: str | None = None):
         else:
             square = button("✏️")
         square.setFixedSize(60, 60)
-        square.setStyleSheet("font-size: 17pt;")
+        square.setStyleSheet("font-size: 17pt; border-radius: 5px; background-color: #333; color: white;")
         buttons.add(square)
         picker.addWidget(square)
     picker.addStretch(1)
     system2 = vlay()
     system2.addLayout(puzzle)
     selectedtext = text("Selected: 1")
-    selectedtext.setStyleSheet("font-size: 42px;")
+    selectedtext.setStyleSheet("font-size: 30px;")
     printbutton = button("Print Puzzle")
-    printbutton.clicked.connect(printPuzzle)
+    printbutton.setFixedHeight(35)
+    printbutton.pressed.connect(lambda: window2.setStyleSheet("color: black;"))
+    printbutton.setStyleSheet("background-color: #333; border-radius: 5px;")
+    printbutton.released.connect(choosePrinter)
     solvedtext = vlay()
     solved = text("You have solved the puzzle!")
-    solved.setStyleSheet("font-size: 96px;")
+    solved.setStyleSheet("font-size: 42px;")
     solvetime = text(str(time()))
     solvetime.setStyleSheet("font-size: 42px;")
     solvedtext.addWidget(solved)
     solvedtext.addWidget(solvetime)
     system2.addLayout(picker)
     system2.addWidget(printbutton)
-    window2 = QWidget()
+    window2 = win()
     window2.setLayout(system2)
     if diff in (None, False):
-        window2.setWindowTitle(f"Today's Puzzle: {datetime.datetime.today().strftime('%m-%d-%Y')} ({stars + 1}★)")
+        window2.setWindowTitle(f"DailySudoku Puzzle #{(datetime.datetime.today() - datetime.datetime(2024, 7, 3)).days}: {datetime.datetime.today().strftime('%m-%d-%Y')} ({stars + 1}★)")
     else:
         window2.setWindowTitle(f"{diff} ({stars + 1}★)")
     window2.windowTitleChanged.connect(music.stop)
     app.aboutToQuit.connect(music.stop)
     window2.setGeometry(0, 0, 0, 0)
-    window2.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint)
-    mainwindow.destroy()
+    mainwindow.close()
+    window2.setStyleSheet("background-color: black; color: white;")
     window2.show()
 
 def SudokuInit(diff: str | None = None):
     global difficulty, music, canplaymusic, canplaymusic2, window2
-    if diff:
-        seed(time())
     music = Music()
     try:
         if canplaymusic.isChecked():
@@ -549,60 +602,67 @@ def SudokuInit(diff: str | None = None):
 
 def VeryEasy():
     global difficulty
+    seed(time())
     difficulty = 29
     SudokuInit("Very Easy Sudoku")
 
 def Easy():
     global difficulty
+    seed(time())
     difficulty = randint(38, 46)
     SudokuInit("Easy Sudoku")
     
 def Medium():
     global difficulty
+    seed(time())
     difficulty = randint(47, 54)
     SudokuInit("Medium Sudoku")
     
 def Hard():
     global difficulty
+    seed(time())
     difficulty = randint(55, 63)
     SudokuInit("Hard Sudoku")
     
 def Expert():
     global difficulty
+    seed(time())
     difficulty = randint(64, 71)
     SudokuInit("Expert Sudoku")
     
 def Master():
     global difficulty
+    seed(time())
     difficulty = randint(72, 81)
     SudokuInit("Master Sudoku")
 
 def CustomDifficulty():
-    global mainwindow, system3, progress, canplaymusic, canplaymusic2
-    window3 = QWidget()
+    global mainwindow, system3, progress, canplaymusic, canplaymusic2, skillpoints, veryeasy, easy, medium, hard, expert, master
+    window3 = win()
     system3 = vlay()
     title = text("Custom Difficulty")
-    title.setAlignment(Qt.Alignment(Qt.AlignCenter))
+    title.setAlignment(Qt.AlignCenter)
     title.setStyleSheet("font-size: 42px;")
     veryeasy = button("Very Easy")
-    veryeasy.setStyleSheet("font-size: 24px; background-color: #0F9;")
+    veryeasy.setStyleSheet("font-size: 20px; background-color: #0F9; border-radius: 5px; color: black;")
     veryeasy.clicked.connect(VeryEasy)
     easy = button("Easy")
-    easy.setStyleSheet("font-size: 24px; background-color: #0F0;")
+    easy.setStyleSheet("font-size: 20px; background-color: #0F0; border-radius: 5px; color: black;")
     easy.clicked.connect(Easy)
     medium = button("Medium")
-    medium.setStyleSheet("font-size: 24px; background-color: #FF0;")
+    medium.setStyleSheet("font-size: 20px; background-color: #FF0; border-radius: 5px; color: black;")
     medium.clicked.connect(Medium)
     hard = button("Hard")
-    hard.setStyleSheet("font-size: 24px; background-color: #F90;")
+    hard.setStyleSheet("font-size: 20px; background-color: #F90; border-radius: 5px; color: black;")
     hard.clicked.connect(Hard)
     expert = button("Expert")
-    expert.setStyleSheet("font-size: 24px; background-color: #F00;")
+    expert.setStyleSheet("font-size: 20px; background-color: #F00; border-radius: 5px; color: black;")
     expert.clicked.connect(Expert)
     master = button("Master")
-    master.setStyleSheet("font-size: 24px; background-color: #F09;")
+    master.setStyleSheet("font-size: 20px; background-color: #F09; border-radius: 5px; color: black;")
     master.clicked.connect(Master)
     progress = bar()
+    progress.setStyleSheet("border-radius: 5px; background-color: #333;")
     progress.setGeometry(0, 0, 150, 50)
     canplaymusic2 = cbox("Music")
     canplaymusic2.setChecked(canplaymusic.isChecked())
@@ -615,57 +675,83 @@ def CustomDifficulty():
     system3.addWidget(progress)
     system3.addWidget(canplaymusic2)
     window3.setLayout(system3)
+    calculateChange(True)
     mainwindow.setCentralWidget(window3)
 
-def calculateChange():
+def calculateChange(custom: bool=False):
     try:
-        global freeplay, dailychallenge, skillpoints, stars
+        global freeplay, dailychallenge, skillpoints, stars, change, veryeasy, easy, medium, hard, expert, master
         freeplay.setEnabled(True)
+        freeplay.setText("Custom Difficulty")
         dailychallenge.setEnabled(True)
-        minchange = round((((stars + 1) * 5) / (int(skillpoints.toPlainText()) / 1000 + 0.03)) - (int(skillpoints.toPlainText()) / 70))
-        maxchange = round((((stars + 1) * 10) / (int(skillpoints.toPlainText()) / 1000 + 0.03)) - (int(skillpoints.toPlainText()) / 70))
-        failchange = round((0 / (int(skillpoints.toPlainText()) / 1000 + 0.03)) - (int(skillpoints.toPlainText()) / 70))
-        if minchange >= 0:
-            minchange = f"+{minchange}"
-        if maxchange >= 0:
-            maxchange = f"+{maxchange}"
-        dailychallenge.setText(f"Daily Challenge ({stars + 1}★) ({minchange} with hints — {maxchange} without hints — {failchange} if failed)")
+        dailychallenge.setText(f"Daily Challenge ({stars + 1}★)")
+        factor = int(skillpoints.toPlainText()) / 1000 + 0.03
+        penalty = int(skillpoints.toPlainText()) / 70
+        minchange = "{:+}".format(round((((stars + 1) * 3) / factor) - penalty))
+        maxchange = "{:+}".format(round((((stars + 1) * 10) / factor) - penalty))
+        failchange = round(0 - penalty)
+        if custom:
+            minchangev = "{:+}".format(round(((0 * 3) / factor) - penalty))
+            maxchangev = "{:+}".format(round(((0 * 10) / factor) - penalty))
+            minchangee = "{:+}".format(round(((1.1 * 3) / factor) - penalty))
+            maxchangee = "{:+}".format(round(((1.1 * 10) / factor) - penalty))
+            minchangem = "{:+}".format(round(((2.2 * 3) / factor) - penalty))
+            maxchangem = "{:+}".format(round(((2.2 * 10) / factor) - penalty))
+            minchangeh = "{:+}".format(round(((3.3 * 3) / factor) - penalty))
+            maxchangeh = "{:+}".format(round(((3.3 * 10) / factor) - penalty))
+            minchangex = "{:+}".format(round(((4.5 * 3) / factor) - penalty))
+            maxchangex = "{:+}".format(round(((4.5 * 10) / factor) - penalty))
+            minchangea = "{:+}".format(round(((5.8 * 3) / factor) - penalty))
+            maxchangea = "{:+}".format(round(((5.8 * 10) / factor) - penalty))
+            veryeasy.setText(f"Very Easy\nWin without hints — {maxchangev}\nWin with hints — {minchangev}\nLoss: {failchange}")
+            easy.setText(f"Easy\nWin without hints — {maxchangee}\nWin with hints — {minchangee}\nLoss: {failchange}")
+            medium.setText(f"Medium\nWin without hints — {maxchangem}\nWin with hints — {minchangem}\nLoss: {failchange}")
+            hard.setText(f"Hard\nWin without hints — {maxchangeh}\nWin with hints — {minchangeh}\nLoss: {failchange}")
+            expert.setText(f"Expert\nWin without hints — {maxchangex}\nWin with hints — {minchangex}\nLoss: {failchange}")
+            master.setText(f"Master\nWin without hints — {maxchangea}\nWin with hints — {minchangea}\nLoss: {failchange}")
+        else:
+            change.setText(f"Skill Points changes (Daily Challenge):\n{maxchange} if won\n{minchange} if won with hints\n{failchange} if failed\n\nWrite these down or screenshot them!")
     except:
         pass
 
 if __name__ == "__main__":
     app = QApplication([])
     mainwindow = main()
-    window = QWidget()
+    window = win()
     system = vlay()
-    title = text("Daily Sudoku")
-    title.setAlignment(Qt.Alignment(Qt.AlignCenter))
+    title = text("Daily Sudoku v3.3")
+    title.setAlignment(Qt.AlignCenter)
     title.setStyleSheet("font-size: 42px;")
-    freeplay = button("Custom Difficulty")
-    freeplay.setStyleSheet("font-size: 24px;")
+    freeplay = button("Enter skill points first")
+    freeplay.setStyleSheet("font-size: 24px; border-radius: 5px; background-color: #333;")
     freeplay.setEnabled(False)
     seed(datetime.datetime.today().strftime('%m-%d-%Y'))
     difficulty = [randint(38, 46), randint(47, 54), randint(55, 63), randint(64, 71), randint(72, 81)][randint(0, 4)]
     stars = round((round(difficulty) - 38) / 43 * 5, 1)
-    dailychallenge = button(f"Daily Challenge ({stars + 1}★)")
-    dailychallenge.setStyleSheet("font-size: 24px;")
+    dailychallenge = button("Enter skill points first")
+    dailychallenge.setStyleSheet("font-size: 24px; border-radius: 5px; background-color: #333;")
     dailychallenge.setEnabled(False)
-    skillpoints = textarea("Enter skill points here to play Sudoku")
+    skillpoints = textarea("Enter skill points here to play Sudoku. Leave blank if you don't wish to be rated.")
+    skillpoints.setStyleSheet("border-radius: 5px; background-color: #333;")
     skillpoints.textChanged.connect(calculateChange)
     canplaymusic = cbox("Music")
     canplaymusic.setChecked(True)
     dailyprogress = bar()
+    dailyprogress.setStyleSheet("border-radius: 5px; background-color: #333;")
+    change = text("Skill Points changes:\n(?) if won\n(?) if won with hints\n(?) if failed")
     system.addWidget(title)
     system.addWidget(freeplay)
     system.addWidget(dailychallenge)
     system.addWidget(skillpoints)
     system.addWidget(canplaymusic)
     system.addWidget(dailyprogress)
+    system.addWidget(change)
     freeplay.clicked.connect(CustomDifficulty)
     dailychallenge.clicked.connect(SudokuInit)
     mainwindow.setWindowTitle("Daily Sudoku")
     mainwindow.setGeometry(0, 0, 400, 250)
     window.setLayout(system)
     mainwindow.setCentralWidget(window)
+    mainwindow.setStyleSheet("background-color: black; color: white;")
     mainwindow.show()
     sys.exit(app.exec())
